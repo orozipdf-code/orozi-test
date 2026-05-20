@@ -1,39 +1,32 @@
-name: Update Bestseller Data
+name: Sync Bestseller Data
 
 on:
   schedule:
-    # 매 시간 정각에 실행 (UTC 기준)
-    - cron: '0 * * * *'
-  workflow_dispatch: # 수동 실행 버튼
+    - cron: '0 * * * *' # 매 정각마다 자동 실행
+  workflow_dispatch: # 수동 실행 버튼 생성
 
 permissions:
-  contents: write # 봇이 파일을 덮어쓸 권한
+  contents: write
 
 jobs:
-  run-scraper:
+  sync-data:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 1. 코드 가져오기
+      - name: 1. 내 코드 가져오기
         uses: actions/checkout@v4
 
-      - name: 2. 파이썬 환경 세팅
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-
-      - name: 3. 라이브러리 설치
+      - name: 2. 장미 씨 저장소에서 최신 데이터 4개 통째로 다운로드
         run: |
-          python -m pip install --upgrade pip
-          pip install requests beautifulsoup4
+          curl -L "https://raw.githubusercontent.com/jangmee/kyobo-bestseller/main/kyobo_bestseller.csv" -o kyobo_bestseller.csv
+          curl -L "https://raw.githubusercontent.com/jangmee/kyobo-bestseller/main/aladin_bestseller.csv" -o aladin_bestseller.csv
+          curl -L "https://raw.githubusercontent.com/jangmee/kyobo-bestseller/main/yes24_bestseller.csv" -o yes24_bestseller.csv
+          curl -L "https://raw.githubusercontent.com/jangmee/kyobo-bestseller/main/history.json" -o history.json
 
-      - name: 4. 스크래퍼 실행 (데이터 수집)
-        run: python scraper.py
-
-      - name: 5. 갱신된 JSON 저장하기
+      - name: 3. 다운로드받은 파일 내 master 방에 안전하게 저장하기
         run: |
           git config --global user.name 'GitHub Actions Bot'
           git config --global user.email 'actions@github.com'
-          git add bestseller_data.json
-          git commit -m "Auto-update bestseller data" || exit 0
-          git push
+          git add kyobo_bestseller.csv aladin_bestseller.csv kyobo_bestseller.csv history.json
+          git commit -m "Hourly sync data from original repo" || exit 0
+          git push origin master
