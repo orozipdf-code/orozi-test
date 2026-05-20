@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>실시간 베스트셀러</title>
+  <title>안형욱이 훔쳐보고 있는 실시간 베스트셀러</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif; background: #f8f8f8; color: #222; }
@@ -120,7 +120,7 @@
 <div class="header" id="header">
   <div class="header-inner">
     <div class="logo" id="logo">REALTIME BESTSELLER</div>
-    <h1>실시간 베스트셀러</h1>
+    <h1>안형욱이 훔쳐보는 실시간 베스트셀러</h1>
     <div class="tabs-row">
       <div class="tabs">
         <div class="tab active" onclick="showMainTab('latest')">최신 차트</div>
@@ -241,7 +241,7 @@ function renderBooks(books, container) {
         <div class="book-title">${book['제목']||''}</div>
         <div class="book-meta">
           ${author} · ${publisher}
-          ${isOurs ? '<span class="our-badge">다산</span>' : ''}
+          ${isOurs ? '<span class="our-badge">윌북</span>' : ''}
         </div>
       </div>
       ${link ? `<div class="book-link"><a href="${link}" target="_blank">상세 페이지</a></div>` : ''}
@@ -336,7 +336,7 @@ function renderHistoryList(history) {
       <div>
         <div class="history-time">${time}</div>
         <div class="history-top">1위: ${top1}</div>
-        ${hasOurs ? `<span class="history-our-badge">다산 ${ourCount}권</span>` : ''}
+        ${hasOurs ? `<span class="history-our-badge">윌북 ${ourCount}권</span>` : ''}
       </div>
       <span style="color:#ccc;font-size:18px">›</span>
     </div>`;
