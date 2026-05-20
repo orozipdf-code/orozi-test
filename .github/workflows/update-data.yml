@@ -1,32 +1,36 @@
-name: Sync Bestseller Data
+name: Run My Own Scraper
 
 on:
   schedule:
-    - cron: '0 * * * *' # 매 정각마다 자동 실행
-  workflow_dispatch: # 수동 실행 버튼 생성
+    - cron: '0 * * * *' # 매 정각마다 실행
+  workflow_dispatch: # 수동 실행 버튼
 
 permissions:
   contents: write
 
 jobs:
-  sync-data:
+  run-scraper:
     runs-on: ubuntu-latest
 
     steps:
       - name: 1. 내 코드 가져오기
         uses: actions/checkout@v4
 
-      - name: 2. 장미 씨 저장소에서 최신 데이터 4개 통째로 다운로드
-        run: |
-          curl -L "https://raw.githubusercontent.com/jangmee/kyobo-bestseller/main/kyobo_bestseller.csv" -o kyobo_bestseller.csv
-          curl -L "https://raw.githubusercontent.com/jangmee/kyobo-bestseller/main/aladin_bestseller.csv" -o aladin_bestseller.csv
-          curl -L "https://raw.githubusercontent.com/jangmee/kyobo-bestseller/main/yes24_bestseller.csv" -o yes24_bestseller.csv
-          curl -L "https://raw.githubusercontent.com/jangmee/kyobo-bestseller/main/history.json" -o history.json
+      - name: 2. 파이썬 세팅
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
 
-      - name: 3. 다운로드받은 파일 내 master 방에 안전하게 저장하기
+      - name: 3. 패키지 설치
+        run: pip install requests beautifulsoup4
+
+      - name: 4. 내가 만든 크롤러 엔진 가동!
+        run: python scraper.py
+
+      - name: 5. 갓 구워낸 따끈한 CSV 파일들 내 방에 저장하기
         run: |
           git config --global user.name 'GitHub Actions Bot'
           git config --global user.email 'actions@github.com'
-          git add kyobo_bestseller.csv aladin_bestseller.csv kyobo_bestseller.csv history.json
-          git commit -m "Hourly sync data from original repo" || exit 0
-          git push origin master
+          git add yes24_bestseller.csv aladin_bestseller.csv kyobo_bestseller.csv history.json
+          git commit -m "Auto-generated chart by my code" || exit 0
+          git push
