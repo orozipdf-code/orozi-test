@@ -18,17 +18,23 @@
     .tab { padding: 10px 16px; font-size: 14px; font-weight: 600; cursor: pointer; border-bottom: 3px solid transparent; color: #888; white-space: nowrap; }
     .tab.active { color: var(--store-color); border-bottom-color: var(--store-color); transition: color 0.2s, border-color 0.2s; }
 
-    .store-tabs { display: flex; gap: 6px; padding-bottom: 10px; }
+    .store-tabs { display: flex; gap: 6px; padding-bottom: 10px; flex-wrap: wrap; }
     .store-tab { padding: 5px 12px; font-size: 13px; font-weight: 600; border-radius: 20px; cursor: pointer; border: 1px solid #ddd; color: #666; background: #fff; transition: all 0.15s; }
     .store-tab.active { color: #fff; }
     .store-tab[data-store="kyobo"].active { background: #6DB329; border-color: #6DB329; }
     .store-tab[data-store="aladin"].active { background: #FB2888; border-color: #FB2888; }
     .store-tab[data-store="yes24"].active { background: #0080FF; border-color: #0080FF; }
+    .store-tab[data-store="total"].active { background: #8e44ad; border-color: #8e44ad; } /* 통합 차트 전용 컬러 (보라색) */
 
     .container { max-width: 900px; margin: 0 auto; padding: 20px; }
 
     .chart-header { background: #fff; border-radius: 12px; padding: 14px 18px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
     .chart-header .time-value { font-size: 14px; font-weight: 700; }
+
+    .refresh-btn { background: none; border: none; font-size: 15px; cursor: pointer; padding: 4px; display: inline-flex; align-items: center; justify-content: center; color: #777; transition: color 0.2s; outline: none; margin-right: 4px; }
+    .refresh-btn:hover { color: var(--store-color); }
+    .refresh-btn.spinning { animation: spin 0.8s linear infinite; pointer-events: none; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
     .search-input { padding: 6px 12px; font-size: 12px; border-radius: 20px; border: 1.5px solid #ddd; outline: none; width: 150px; transition: all 0.2s ease-in-out; font-family: inherit; }
     .search-input:focus { border-color: var(--store-color); width: 200px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
@@ -36,12 +42,13 @@
     .filter-btn { padding: 5px 12px; font-size: 12px; font-weight: 700; border-radius: 20px; cursor: pointer; border: 1.5px solid var(--store-color); color: var(--store-color); background: #fff; transition: all 0.15s; white-space: nowrap; }
     .filter-btn.active { background: var(--store-color); color: #fff; }
 
-    .book-item { background: #fff; border-radius: 12px; padding: 14px 18px; margin-bottom: 8px; display: flex; align-items: center; gap: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); transition: box-shadow 0.15s; }
-    .book-item:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    /* 클릭 가능한 카드 스타일 지정 */
+    .book-item { background: #fff; border-radius: 12px; padding: 14px 18px; margin-bottom: 8px; display: flex; align-items: center; gap: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); transition: all 0.15s; cursor: pointer; }
+    .book-item:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); transform: translateX(2px); border-left-color: var(--store-color); }
     .book-item.hidden { display: none !important; }
     .book-item.highlight { border-left: 3px solid var(--store-color); }
 
-    .rank-col { min-width: 34px; text-align: center; flex-shrink: 0; }
+    .rank-col { min-width: 38px; text-align: center; flex-shrink: 0; }
     .rank-num { font-size: 20px; font-weight: 800; line-height: 1; }
     .rank-num.top3 { color: var(--store-color); }
     .change-badge { font-size: 11px; font-weight: 700; margin-top: 2px; }
@@ -49,12 +56,14 @@
     .change-badge.down { color: #4a90e2; }
     .change-badge.new { color: #ff7f00; }
     .change-badge.same { color: #bbb; }
+    .change-badge.pts { color: #8e44ad; font-size: 10px; background:#f4ebf9; padding: 2px 4px; border-radius: 4px;} /* 통합 차트 포인트 배지 */
 
     .divider { width: 1px; height: 36px; background: #eee; flex-shrink: 0; }
     .book-info { flex: 1; min-width: 0; }
     .book-title { font-size: 14px; font-weight: 700; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .book-meta { font-size: 12px; color: #999; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 6px; }
     .our-badge { font-size: 10px; font-weight: 700; color: #fff; background: var(--store-color); border-radius: 4px; padding: 1px 5px; white-space: nowrap; flex-shrink: 0; }
+    .store-badge-mini { font-size: 9px; padding: 1px 4px; border-radius: 3px; color: #fff; font-weight: bold; }
 
     .book-link a { font-size: 11px; color: var(--store-color); text-decoration: none; border: 1px solid var(--store-color); border-radius: 4px; padding: 3px 7px; white-space: nowrap; font-weight: 600; transition: all 0.15s; }
     .book-link a:hover { background: var(--store-color); color: #fff; }
@@ -72,34 +81,25 @@
     .back-btn { background: none; border: none; color: #888; font-size: 14px; cursor: pointer; margin-bottom: 14px; padding: 0; font-family: inherit; display: flex; align-items: center; gap: 4px; }
     .back-btn:hover { color: #222; }
 
-    /* ── 뷰 토글 ── */
     .chart-header { flex-wrap: wrap; gap: 8px; }
     .chart-header-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     .view-toggle { display: flex; gap: 4px; background: #f0f0f0; border-radius: 8px; padding: 3px; }
     .view-btn { padding: 5px 11px; border-radius: 6px; border: none; background: none; cursor: pointer; font-size: 15px; color: #999; line-height: 1; transition: all 0.15s; }
     .view-btn.active { background: #fff; color: var(--store-color); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
 
-    /* ── 갤러리 그리드 ── */
     .gallery-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
     @media (max-width: 720px) { .gallery-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; } }
     @media (max-width: 480px) { .gallery-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; } }
 
-    .gallery-card { background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); display: flex; flex-direction: column; border: 2px solid transparent; transition: box-shadow 0.15s, transform 0.15s; }
-    .gallery-card:hover { box-shadow: 0 6px 16px rgba(0,0,0,0.13); transform: translateY(-2px); }
+    .gallery-card { background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); display: flex; flex-direction: column; border: 2px solid transparent; transition: all 0.15s; cursor: pointer; }
+    .gallery-card:hover { box-shadow: 0 6px 16px rgba(0,0,0,0.13); transform: translateY(-4px); border-color: var(--store-color); }
     .gallery-card.highlight { border-color: var(--store-color); }
     .gallery-card.hidden { display: none !important; }
 
     .card-img-wrap { position: relative; aspect-ratio: 3 / 4; background: #e8e8e8; overflow: hidden; flex-shrink: 0; }
     .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .card-img-wrap.skeleton { background: #f0f0f0; }
-    .card-img-wrap.skeleton::after {
-      content: '이미지\A준비 중';
-      white-space: pre;
-      position: absolute; inset: 0;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 10px; color: #bbb; line-height: 1.8; text-align: center;
-      font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
-    }
+    .card-img-wrap.skeleton::after { content: '이미지\A준비 중'; white-space: pre; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #bbb; line-height: 1.8; text-align: center; }
 
     .card-info { padding: 8px 9px 9px; display: flex; flex-direction: column; gap: 3px; flex: 1; }
     .card-rank-row { display: flex; align-items: baseline; gap: 5px; }
@@ -107,14 +107,32 @@
     .card-rank.top3 { color: var(--store-color); }
     .card-change { font-size: 11px; font-weight: 700; }
     .card-change.up { color: #e60012; } .card-change.down { color: #4a90e2; } .card-change.new { color: #ff7f00; } .card-change.same { color: #ccc; }
+    .card-change.pts { color: #8e44ad; font-size: 10px; background:#f4ebf9; padding: 2px 4px; border-radius: 4px;}
     .card-title { font-size: 11px; font-weight: 700; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
     .card-author { font-size: 10px; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .card-pub-row { display: flex; align-items: center; gap: 4px; min-width: 0; }
+    .card-pub-row { display: flex; align-items: center; gap: 4px; min-width: 0; flex-wrap: wrap;}
     .card-publisher { font-size: 10px; color: #bbb; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
     .card-our-badge { font-size: 9px; font-weight: 700; color: #fff; background: var(--store-color); border-radius: 3px; padding: 1px 4px; white-space: nowrap; flex-shrink: 0; }
     .card-link { margin-top: auto; padding-top: 6px; }
     .card-link a { display: block; text-align: center; font-size: 10px; font-weight: 600; color: var(--store-color); text-decoration: none; border: 1px solid var(--store-color); border-radius: 4px; padding: 3px 0; transition: all 0.15s; }
     .card-link a:hover { background: var(--store-color); color: #fff; }
+
+    /* 📈 추이 분석 팝업 (모달) 스타일 */
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 20px; opacity: 0; transition: opacity 0.2s; backdrop-filter: blur(2px); }
+    .modal-overlay.show { display: flex; opacity: 1; }
+    .modal-content { background: #fff; width: 100%; max-width: 400px; border-radius: 16px; padding: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); position: relative; max-height: 85vh; display: flex; flex-direction: column; }
+    .modal-close { position: absolute; top: 16px; right: 16px; font-size: 24px; cursor: pointer; color: #999; background: none; border: none; line-height: 1; transition: color 0.2s; }
+    .modal-close:hover { color: #222; }
+    .modal-header { margin-bottom: 16px; padding-right: 20px; }
+    .modal-title { font-size: 18px; font-weight: 800; line-height: 1.3; margin-bottom: 4px; color: #222; }
+    .modal-author { font-size: 13px; color: var(--store-color); font-weight: 700; }
+    .trend-list { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; padding-right: 4px; }
+    .trend-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #f8f9fa; border-radius: 10px; font-size: 14px; border-left: 3px solid transparent; }
+    .trend-item.is-top { border-left-color: var(--store-color); background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .trend-time { color: #555; font-weight: 700; font-size: 13px; }
+    .trend-rank { font-weight: 800; font-size: 16px; color: var(--store-color); }
+    .trend-rank.none { color: #ccc; font-weight: 400; font-size: 13px; }
+    .trend-stores { display: flex; gap: 4px; }
   </style>
 </head>
 <body>
@@ -132,6 +150,7 @@
         <div class="store-tab active" data-store="kyobo" onclick="setStore('kyobo')">교보문고</div>
         <div class="store-tab" data-store="aladin" onclick="setStore('aladin')">알라딘</div>
         <div class="store-tab" data-store="yes24" onclick="setStore('yes24')">예스24</div>
+        <div class="store-tab" data-store="total" onclick="setStore('total')">👑 통합 차트</div>
       </div>
     </div>
   </div>
@@ -142,10 +161,23 @@
   <div id="history-view" style="display:none"><div class="loading">불러오는 중...</div></div>
 </div>
 
+<div class="modal-overlay" id="trendModal" onclick="if(event.target===this) closeTrendModal()">
+  <div class="modal-content">
+    <button class="modal-close" onclick="closeTrendModal()">×</button>
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">책 제목</div>
+      <div class="modal-author" id="modalAuthor">저자</div>
+    </div>
+    <div class="trend-list" id="trendList">
+      </div>
+  </div>
+</div>
+
 <script>
 const RAW = "https://raw.githubusercontent.com/orozipdf-code/orozi-test/master/";
 const CSV_FILES = { kyobo: "kyobo_bestseller.csv", aladin: "aladin_bestseller.csv", yes24: "yes24_bestseller.csv" };
-const STORE_COLORS = { kyobo: "#6DB329", aladin: "#FB2888", yes24: "#0080FF" };
+const STORE_COLORS = { kyobo: "#6DB329", aladin: "#FB2888", yes24: "#0080FF", total: "#8e44ad" };
+const STORE_NAMES = { kyobo: "교보", aladin: "알라딘", yes24: "예스24" };
 
 const OUR_PUBLISHERS = ["윌북", "윌북아트", "윌북주니어"];
 
@@ -186,7 +218,8 @@ function isOurPublisher(publisher) {
   return OUR_PUBLISHERS.some(p => publisher && publisher.includes(p));
 }
 
-function changeIcon(change) {
+function changeIcon(change, points = null) {
+  if (points !== null) return { icon: `${points}점`, cls: 'pts' };
   if (!change || change === '-') return { icon: '–', cls: 'same' };
   if (change === 'NEW') return { icon: 'NEW', cls: 'new' };
   if (change.startsWith('↑')) return { icon: change, cls: 'up' };
@@ -204,36 +237,26 @@ function toOnTheHour(timeStr) {
 
 function setView(view) {
   currentView = view;
-
   document.querySelectorAll('.view-toggle').forEach(toggle => {
     const listBtn = toggle.querySelector('.view-btn:nth-child(1)');
     const galleryBtn = toggle.querySelector('.view-btn:nth-child(2)');
     if (listBtn) listBtn.classList.toggle('active', view === 'list');
     if (galleryBtn) galleryBtn.classList.toggle('active', view === 'gallery');
   });
-
   document.querySelectorAll('.books-list-view').forEach(el => el.style.display = view === 'list' ? '' : 'none');
   document.querySelectorAll('.books-gallery-view').forEach(el => el.style.display = view === 'gallery' ? '' : 'none');
-
   applyFilters();
 }
 
-/* 🛠️ 버그 완전 해결: 갤러리 카드의 모든 텍스트 요소를 빠짐없이 결합하여 다중 검색 적용 */
 function applyFilters() {
   const items = document.querySelectorAll('.book-item, .gallery-card');
   items.forEach(el => {
     const isOurs = el.dataset.ours === 'true';
-
-    // 제목, 저자, 출판사 클래스를 전부 선택해서 텍스트를 하나로 묶어줍니다!
     const targets = el.querySelectorAll('.book-title, .card-title, .book-meta, .card-author, .card-publisher');
     let combinedText = '';
-    targets.forEach(target => {
-      combinedText += target.textContent.toLowerCase() + ' ';
-    });
-
+    targets.forEach(t => combinedText += t.textContent.toLowerCase() + ' ');
     const matchesPub = !filterOn || isOurs;
     const matchesSearch = combinedText.includes(searchQuery);
-
     el.classList.toggle('hidden', !(matchesPub && matchesSearch));
   });
 }
@@ -250,24 +273,113 @@ function handleSearch(e) {
   applyFilters();
 }
 
+async function handleRefresh(btn) {
+  if (btn.classList.contains('spinning')) return;
+  btn.classList.add('spinning');
+  await loadLatest();
+}
+
+/* 👑 핵심 엔진 1: 3사 데이터 융합 알고리즘 */
+function calculateTotal(kData, aData, yData) {
+  const bookMap = {};
+  const process = (data, sName) => {
+    (data || []).forEach(b => {
+      const t = (b['제목'] || '').trim(); const a = (b['저자'] || '').trim();
+      if (!t) return;
+      const k = t + '|' + a;
+      const r = parseInt(b['순위']) || 100;
+      const pts = 101 - r; // 1위는 100점, 100위는 1점
+
+      if (!bookMap[k]) bookMap[k] = { ...b, points: 0, stores: [] };
+      bookMap[k].points += pts;
+      bookMap[k].stores.push(sName);
+    });
+  };
+  process(kData, 'kyobo'); process(aData, 'aladin'); process(yData, 'yes24');
+
+  const sorted = Object.values(bookMap).sort((a, b) => b.points - a.points);
+  sorted.forEach((b, i) => { b['순위'] = i + 1; b['순위변동'] = '-'; });
+  return sorted;
+}
+
+/* 📈 핵심 엔진 2: 시간별 추이 모달 띄우기 */
+function openTrendModal(el) {
+  const title = el.dataset.title;
+  const author = el.dataset.author;
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalAuthor').textContent = author;
+
+  let html = '';
+  const limits = historyData.slice(0, 12); // 과거 12시간 추적
+
+  limits.forEach((entry, idx) => {
+    const time = toOnTheHour(entry['수집시각']);
+    let rankText = '<span class="trend-rank none">차트 아웃</span>';
+    let isTop = false;
+
+    if (currentStore === 'total') {
+      const getR = (s) => { const b = (entry['데이터'][s]||[]).find(x => x['제목'] === title); return b ? parseInt(b['순위']) : null; };
+      const kr = getR('kyobo'), ar = getR('aladin'), yr = getR('yes24');
+      if (kr || ar || yr) {
+        rankText = `<div class="trend-stores">
+          ${kr ? `<span class="store-badge-mini" style="background:#6DB329">교 ${kr}위</span>` : ''}
+          ${ar ? `<span class="store-badge-mini" style="background:#FB2888">알 ${ar}위</span>` : ''}
+          ${yr ? `<span class="store-badge-mini" style="background:#0080FF">예 ${yr}위</span>` : ''}
+        </div>`;
+        if(kr<=10 || ar<=10 || yr<=10) isTop = true;
+      }
+    } else {
+      const b = (entry['데이터'][currentStore]||[]).find(x => x['제목'] === title);
+      if (b) {
+        const r = parseInt(b['순위']);
+        rankText = `<span class="trend-rank">${r}위</span>`;
+        if(r <= 10) isTop = true;
+      }
+    }
+
+    html += `<div class="trend-item ${isTop ? 'is-top' : ''}">
+      <span class="trend-time">${idx === 0 ? '🕒 최신 (현재)' : time}</span>
+      ${rankText}
+    </div>`;
+  });
+
+  if(limits.length === 0) html = '<div style="padding:20px; text-align:center; color:#999;">과거 데이터가 아직 없습니다.</div>';
+
+  document.getElementById('trendList').innerHTML = html;
+  const modal = document.getElementById('trendModal');
+  modal.classList.add('show');
+}
+
+function closeTrendModal() {
+  document.getElementById('trendModal').classList.remove('show');
+}
+
 function renderBooks(books, container) {
   if (!books || books.length === 0) {
     container.innerHTML = '<div class="error">데이터가 없어요.</div>';
     return;
   }
   const time = books[0]['수집시각'] || '';
+  const isTotal = currentStore === 'total';
   let listHtml = ''; let galleryHtml = '';
 
   books.forEach(book => {
     const rank = parseInt(book['순위']) || 0;
-    const { icon, cls } = changeIcon(book['순위변동'] || '');
+    const { icon, cls } = changeIcon(book['순위변동'] || '', isTotal ? book.points : null);
     const link = book['LINK'] || book['링크'] || '';
     const publisher = book['출판사'] || '';
     const author = book['저자'] || '';
     const imgUrl = book['이미지URL'] || '';
+    const titleClean = (book['제목']||'').replace(/"/g, '&quot;');
+    const authorClean = author.replace(/"/g, '&quot;');
     const isOurs = isOurPublisher(publisher);
 
-    listHtml += `<div class="book-item ${isOurs ? 'highlight' : ''}" data-ours="${isOurs}">
+    let storeBadges = '';
+    if (isTotal && book.stores) {
+      storeBadges = book.stores.map(s => `<span class="store-badge-mini" style="background:${STORE_COLORS[s]}">${STORE_NAMES[s][0]}</span>`).join(' ');
+    }
+
+    listHtml += `<div class="book-item ${isOurs ? 'highlight' : ''}" data-ours="${isOurs}" data-title="${titleClean}" data-author="${authorClean}" onclick="openTrendModal(this)">
       <div class="rank-col">
         <div class="rank-num ${rank<=3?'top3':''}">${rank}</div>
         <div class="change-badge ${cls}">${icon}</div>
@@ -275,20 +387,20 @@ function renderBooks(books, container) {
       <div class="divider"></div>
       <div class="book-info">
         <div class="book-title">${book['제목']||''}</div>
-        <div class="book-meta">${author} · ${publisher} ${isOurs ? '<span class="our-badge">윌북</span>' : ''}</div>
+        <div class="book-meta">${author} · ${publisher} ${isOurs ? '<span class="our-badge">윌북</span>' : ''} ${storeBadges}</div>
       </div>
-      ${link ? `<div class="book-link"><a href="${link}" target="_blank">상세 페이지</a></div>` : ''}
+      ${link ? `<div class="book-link"><a href="${link}" target="_blank" onclick="event.stopPropagation()">상세 페이지</a></div>` : ''}
     </div>`;
 
-    const imgContent = imgUrl ? `<img src="${imgUrl}" referrerpolicy="no-referrer" loading="lazy" onerror="this.parentElement.classList.add('skeleton');this.style.display='none';" alt="${(book['제목']||'').replace(/"/g,'')}">` : '';
-    galleryHtml += `<div class="gallery-card ${isOurs ? 'highlight' : ''}" data-ours="${isOurs}">
+    const imgContent = imgUrl ? `<img src="${imgUrl}" referrerpolicy="no-referrer" loading="lazy" onerror="this.parentElement.classList.add('skeleton');this.style.display='none';" alt="${titleClean}">` : '';
+    galleryHtml += `<div class="gallery-card ${isOurs ? 'highlight' : ''}" data-ours="${isOurs}" data-title="${titleClean}" data-author="${authorClean}" onclick="openTrendModal(this)">
       <div class="card-img-wrap ${imgUrl ? '' : 'skeleton'}">${imgContent}</div>
       <div class="card-info">
         <div class="card-rank-row"><span class="card-rank ${rank<=3?'top3':''}">${rank}</span><span class="card-change ${cls}">${icon}</span></div>
         <div class="card-title">${book['제목']||''}</div>
         <div class="card-author">${author}</div>
-        <div class="card-pub-row"><span class="card-publisher">${publisher}</span>${isOurs ? '<span class="card-our-badge">윌북</span>' : ''}</div>
-        ${link ? `<div class="card-link"><a href="${link}" target="_blank" referrerpolicy="no-referrer">상세 페이지</a></div>` : ''}
+        <div class="card-pub-row"><span class="card-publisher">${publisher}</span>${isOurs ? '<span class="card-our-badge">윌북</span>' : ''} ${storeBadges}</div>
+        ${link ? `<div class="card-link"><a href="${link}" target="_blank" referrerpolicy="no-referrer" onclick="event.stopPropagation()">상세 페이지</a></div>` : ''}
       </div>
     </div>`;
   });
@@ -297,7 +409,8 @@ function renderBooks(books, container) {
     <div class="chart-header">
       <div class="chart-header-left">
         <span class="time-value">📅 ${toOnTheHour(time)}</span>
-        <input type="text" class="search-input" id="searchInput" placeholder="🔍 제목, 저자 실시간 검색..." oninput="handleSearch(event)" value="${searchQuery}">
+        <button class="refresh-btn" onclick="handleRefresh(this)" title="실시간 데이터 새로고침">🔄</button>
+        <input type="text" class="search-input" id="searchInput" placeholder="🔍 ${isTotal ? '통합차트 검색...' : '제목, 저자, 출판사 검색...'}" oninput="handleSearch(event)" value="${searchQuery}">
         <button class="filter-btn ${filterOn ? 'active' : ''}" id="filterBtn" onclick="toggleFilter()">우리 출판사만 보기</button>
       </div>
       <div class="view-toggle">
@@ -315,15 +428,28 @@ function renderHistoryList(history) {
   const container = document.getElementById('history-view');
   if (!history || history.length === 0) { container.innerHTML = '<div class="error">지난 차트가 아직 없어요.</div>'; return; }
   let html = '<div class="history-list">';
+
   [...history].reverse().forEach((entry, i) => {
-    const data = entry['데이터']?.[currentStore] || [];
     const time = toOnTheHour(entry['수집시각'] || '');
-    const hasOurs = data.some(b => isOurPublisher(b['출판사'] || ''));
-    const ourCount = data.filter(b => isOurPublisher(b['출판사'] || '')).length;
+    let topTitle = '데이터 없음';
+    let hasOurs = false; let ourCount = 0;
+
+    if (currentStore === 'total') {
+       const sorted = calculateTotal(entry['데이터']['kyobo'], entry['데이터']['aladin'], entry['데이터']['yes24']);
+       if(sorted[0]) topTitle = sorted[0]['제목'];
+       ourCount = sorted.filter(b => isOurPublisher(b['출판사'])).length;
+       hasOurs = ourCount > 0;
+    } else {
+       const data = entry['데이터']?.[currentStore] || [];
+       if(data[0]) topTitle = data[0]['제목'];
+       ourCount = data.filter(b => isOurPublisher(b['출판사'])).length;
+       hasOurs = ourCount > 0;
+    }
+
     html += `<div class="history-item ${hasOurs ? 'has-ours' : ''}" onclick="showHistoryDetail(${history.length-1-i})">
       <div>
         <div class="history-time">${time}</div>
-        <div class="history-top">1위: ${data[0]?.['제목'] || '데이터 없음'}</div>
+        <div class="history-top">1위: ${topTitle}</div>
         ${hasOurs ? `<span class="history-our-badge">윌북 ${ourCount}권</span>` : ''}
       </div><span style="color:#ccc;font-size:18px">›</span>
     </div>`;
@@ -333,11 +459,17 @@ function renderHistoryList(history) {
 
 function showHistoryDetail(index) {
   filterOn = false; searchQuery = ''; const entry = historyData[index]; if (!entry) return;
-  const books = entry['데이터']?.[currentStore] || [];
   const container = document.getElementById('history-view'); container.innerHTML = '';
   const btn = document.createElement('button'); btn.className = 'back-btn'; btn.innerHTML = '← 목록으로';
   btn.onclick = () => renderHistoryList(historyData); container.appendChild(btn);
-  const inner = document.createElement('div'); container.appendChild(inner); renderBooks(books, inner);
+  const inner = document.createElement('div'); container.appendChild(inner);
+
+  if(currentStore === 'total') {
+     const d = entry['데이터'];
+     renderBooks(calculateTotal(d['kyobo'], d['aladin'], d['yes24']), inner);
+  } else {
+     renderBooks(entry['데이터'][currentStore] || [], inner);
+  }
 }
 
 function parseCSV(text) {
@@ -357,11 +489,22 @@ function parseCSV(text) {
 }
 
 async function loadLatest() {
-  filterOn = false; const container = document.getElementById('latest-view');
-  container.innerHTML = '<div class="loading">불러오는 중...</div>';
+  const container = document.getElementById('latest-view');
+  if (container.innerHTML.includes('loading')) container.innerHTML = '<div class="loading">불러오는 중...</div>';
+
   try {
-    const res = await fetch(RAW + CSV_FILES[currentStore] + '?t=' + Date.now());
-    renderBooks(parseCSV(await res.text()), container);
+    if (currentStore === 'total') {
+      const [kRes, aRes, yRes] = await Promise.all([
+        fetch(RAW + CSV_FILES['kyobo'] + '?t=' + Date.now()),
+        fetch(RAW + CSV_FILES['aladin'] + '?t=' + Date.now()),
+        fetch(RAW + CSV_FILES['yes24'] + '?t=' + Date.now())
+      ]);
+      const sorted = calculateTotal(parseCSV(await kRes.text()), parseCSV(await aRes.text()), parseCSV(await yRes.text()));
+      renderBooks(sorted, container);
+    } else {
+      const res = await fetch(RAW + CSV_FILES[currentStore] + '?t=' + Date.now());
+      renderBooks(parseCSV(await res.text()), container);
+    }
   } catch { container.innerHTML = '<div class="error">데이터를 불러오지 못했어요.</div>'; }
 }
 
