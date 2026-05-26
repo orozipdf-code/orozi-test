@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>실시간 베스트셀러</title>
   <link rel="icon" href="logo.png">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
     <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif; background: #f8f8f8; color: #222; }
@@ -118,15 +119,44 @@
     .card-link a { display: block; text-align: center; font-size: 10px; font-weight: 600; color: var(--store-color); text-decoration: none; border: 1px solid var(--store-color); border-radius: 4px; padding: 3px 0; transition: all 0.15s; }
     .card-link a:hover { background: var(--store-color); color: #fff; }
 
+    /* 🔥 급상승 / 신규진입 하이라이트 섹션 */
+    .highlight-section { margin-bottom: 12px; }
+    .hl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    @media (max-width: 600px) { .hl-grid { grid-template-columns: 1fr; } }
+    .hl-box { background: #fff; border-radius: 12px; padding: 14px 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+    .hl-box-title { font-size: 13px; font-weight: 800; margin-bottom: 10px; display: flex; align-items: center; gap: 5px; }
+    .hl-box.up .hl-box-title { color: #e60012; }
+    .hl-box.new .hl-box-title { color: #ff7f00; }
+    .hl-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; cursor: pointer; border-radius: 6px; transition: background 0.12s; }
+    .hl-row:hover { background: #f7f7f7; }
+    .hl-row + .hl-row { border-top: 1px solid #f2f2f2; }
+    .hl-rank { font-size: 13px; font-weight: 800; min-width: 30px; text-align: center; color: #555; flex-shrink: 0; }
+    .hl-info { flex: 1; min-width: 0; }
+    .hl-title { font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hl-sub { font-size: 10px; color: #aaa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hl-badge { font-size: 11px; font-weight: 800; flex-shrink: 0; padding: 2px 7px; border-radius: 10px; }
+    .hl-badge.up { color: #e60012; background: #fdeaea; }
+    .hl-badge.new { color: #ff7f00; background: #fff3e0; }
+    .hl-empty { font-size: 12px; color: #bbb; padding: 8px 0; text-align: center; }
+
     /* 📈 추이 분석 팝업 (모달) 스타일 */
     .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 20px; opacity: 0; transition: opacity 0.2s; backdrop-filter: blur(2px); }
     .modal-overlay.show { display: flex; opacity: 1; }
-    .modal-content { background: #fff; width: 100%; max-width: 400px; border-radius: 16px; padding: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); position: relative; max-height: 85vh; display: flex; flex-direction: column; }
+    .modal-content { background: #fff; width: 100%; max-width: 440px; border-radius: 16px; padding: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); position: relative; max-height: 85vh; display: flex; flex-direction: column; }
     .modal-close { position: absolute; top: 16px; right: 16px; font-size: 24px; cursor: pointer; color: #999; background: none; border: none; line-height: 1; transition: color 0.2s; }
     .modal-close:hover { color: #222; }
     .modal-header { margin-bottom: 16px; padding-right: 20px; }
     .modal-title { font-size: 18px; font-weight: 800; line-height: 1.3; margin-bottom: 4px; color: #222; }
     .modal-author { font-size: 13px; color: var(--store-color); font-weight: 700; }
+
+    /* 📈 그래프/리스트 전환 토글 */
+    .trend-view-toggle { display: flex; gap: 4px; background: #f0f0f0; border-radius: 8px; padding: 3px; margin-bottom: 14px; align-self: flex-start; }
+    .trend-view-btn { padding: 4px 12px; border-radius: 6px; border: none; background: none; cursor: pointer; font-size: 12px; font-weight: 700; color: #999; transition: all 0.15s; font-family: inherit; }
+    .trend-view-btn.active { background: #fff; color: var(--store-color); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+
+    .trend-chart-wrap { position: relative; height: 280px; }
+    .trend-chart-empty { padding: 60px 20px; text-align: center; color: #bbb; font-size: 13px; }
+
     .trend-list { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; padding-right: 4px; }
     .trend-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #f8f9fa; border-radius: 10px; font-size: 14px; border-left: 3px solid transparent; }
     .trend-item.is-top { border-left-color: var(--store-color); background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
@@ -144,7 +174,7 @@
 <div class="header" id="header">
   <div class="header-inner">
     <div class="logo" id="logo">REALTIME BESTSELLER by ahu(orozi) </div>
-    <h1>실시간 베스트셀러</h1>
+    <h1>실시간 베스트셀러(beta)</h1>
     <div class="tabs-row">
       <div class="tabs">
         <div class="tab active" onclick="showMainTab('latest')">최신 차트</div>
@@ -172,8 +202,14 @@
       <div class="modal-title" id="modalTitle">책 제목</div>
       <div class="modal-author" id="modalAuthor">저자</div>
     </div>
-    <div class="trend-list" id="trendList">
-      </div>
+    <div class="trend-view-toggle">
+      <button class="trend-view-btn active" id="trendBtnChart" onclick="setTrendView('chart')">📈 그래프</button>
+      <button class="trend-view-btn" id="trendBtnList" onclick="setTrendView('list')">☰ 목록</button>
+    </div>
+    <div id="trendChartView">
+      <div class="trend-chart-wrap"><canvas id="trendChartCanvas"></canvas></div>
+    </div>
+    <div class="trend-list" id="trendList" style="display:none"></div>
   </div>
 </div>
 
@@ -206,6 +242,9 @@ let filterOn = false;
 let searchQuery = '';
 let currentView = 'list';
 let searchTimeout;
+let trendView = 'chart';     // 📈 추이 모달: 'chart' 또는 'list'
+let trendChart = null;       // 📈 Chart.js 인스턴스 보관
+let modalBookTitle = '';     // 📈 현재 모달에 띄운 책 제목
 
 function setStoreColor(store) {
   document.documentElement.style.setProperty('--store-color', STORE_COLORS[store]);
@@ -256,12 +295,33 @@ function changeIcon(change, points = null) {
   return { icon: change, cls: 'same' };
 }
 
+// 🔢 순위변동 문자열에서 상승/하락 칸수를 숫자로 추출 (↑5 → 5, ↓3 → -3)
+function parseChangeDelta(change) {
+  const val = (change || '').toString().trim();
+  const m = val.match(/(\d+)/);
+  if (!m) return 0;
+  const n = parseInt(m[1]);
+  if (val.includes('↑') || val.includes('▲') || val.includes('상승')) return n;
+  if (val.includes('↓') || val.includes('▼') || val.includes('하락')) return -n;
+  return 0;
+}
+
 function toOnTheHour(timeStr) {
   const clean = timeStr.replace(/-/g, '.');
   const parts = clean.split(' ');
   if (parts.length < 2) return clean + ' 기준';
   const hour = parts[1].split(':')[0];
   return parts[0] + ' ' + hour + ':00 기준';
+}
+
+// 📈 그래프 X축용 짧은 시각 라벨 (MM.DD HH시)
+function toShortTime(timeStr) {
+  const clean = (timeStr || '').replace(/-/g, '.');
+  const parts = clean.split(' ');
+  if (parts.length < 2) return clean;
+  const md = parts[0].split('.').slice(1).join('.');  // MM.DD
+  const hour = parts[1].split(':')[0];
+  return `${md} ${hour}시`;
 }
 
 function setView(view) {
@@ -351,12 +411,174 @@ function calculateTotal(kData, aData, yData) {
   return sorted;
 }
 
+// 🔥 급상승 / 신규진입 하이라이트 박스 HTML 생성
+function buildHighlights(books, isTotal) {
+  // 통합 차트는 순위변동 데이터가 없으므로 하이라이트 생략
+  if (isTotal || !books || books.length === 0) return '';
+
+  const risers = books
+    .map(b => ({ book: b, delta: parseChangeDelta(b['순위변동']) }))
+    .filter(x => x.delta > 0)
+    .sort((a, b) => b.delta - a.delta)
+    .slice(0, 5);
+
+  const newcomers = books
+    .filter(b => {
+      const v = (b['순위변동'] || '').toString().trim().toUpperCase();
+      return v === 'NEW' || v === '진입';
+    })
+    .sort((a, b) => (parseInt(a['순위']) || 99) - (parseInt(b['순위']) || 99))
+    .slice(0, 5);
+
+  const esc = s => (s || '').replace(/"/g, '&quot;');
+
+  const rowHtml = (b, badgeText, badgeCls) => {
+    const t = esc(b['제목']);
+    const a = esc(b['저자']);
+    return `<div class="hl-row" data-title="${t}" data-author="${a}" onclick="openTrendModal(this)">
+      <span class="hl-rank">${parseInt(b['순위'])||'-'}위</span>
+      <div class="hl-info">
+        <div class="hl-title">${b['제목']||''}</div>
+        <div class="hl-sub">${b['저자']||''} · ${b['출판사']||''}</div>
+      </div>
+      <span class="hl-badge ${badgeCls}">${badgeText}</span>
+    </div>`;
+  };
+
+  const upRows = risers.length
+    ? risers.map(x => rowHtml(x.book, `▲ ${x.delta}`, 'up')).join('')
+    : '<div class="hl-empty">이번 시간엔 급상승 도서가 없어요</div>';
+
+  const newRows = newcomers.length
+    ? newcomers.map(b => rowHtml(b, 'NEW', 'new')).join('')
+    : '<div class="hl-empty">이번 시간엔 신규 진입 도서가 없어요</div>';
+
+  return `<div class="highlight-section">
+    <div class="hl-grid">
+      <div class="hl-box up">
+        <div class="hl-box-title">🔥 지금 급상승 TOP 5</div>
+        ${upRows}
+      </div>
+      <div class="hl-box new">
+        <div class="hl-box-title">✨ 신규 진입</div>
+        ${newRows}
+      </div>
+    </div>
+  </div>`;
+}
+
+// 📈 추이 모달: 한 책의 시간대별 순위 시계열 추출
+function getTrendSeries(title) {
+  const ordered = [...historyData];  // 과거 → 현재 순
+  const labels = [];
+  if (currentStore === 'total') {
+    // 통합: 세 서점 각각의 순위를 별도 라인으로
+    const series = { kyobo: [], aladin: [], yes24: [] };
+    ordered.forEach(entry => {
+      labels.push(toShortTime(entry['수집시각']));
+      ['kyobo', 'aladin', 'yes24'].forEach(s => {
+        const b = (entry['데이터']?.[s] || []).find(x => x['제목'] === title);
+        series[s].push(b ? parseInt(b['순위']) : null);
+      });
+    });
+    return { labels, series, isTotal: true };
+  } else {
+    const arr = [];
+    ordered.forEach(entry => {
+      labels.push(toShortTime(entry['수집시각']));
+      const b = (entry['데이터']?.[currentStore] || []).find(x => x['제목'] === title);
+      arr.push(b ? parseInt(b['순위']) : null);
+    });
+    return { labels, series: { [currentStore]: arr }, isTotal: false };
+  }
+}
+
+// 📈 Chart.js 꺾은선 그래프 렌더링
+function renderTrendChart(title) {
+  const wrap = document.getElementById('trendChartView');
+  const { labels, series, isTotal } = getTrendSeries(title);
+
+  const hasAnyPoint = Object.values(series).some(arr => arr.some(v => v !== null));
+  if (!hasAnyPoint || labels.length === 0) {
+    wrap.innerHTML = '<div class="trend-chart-empty">아직 그래프를 그릴 만한<br>과거 데이터가 충분하지 않아요 📭</div>';
+    return;
+  }
+  wrap.innerHTML = '<div class="trend-chart-wrap"><canvas id="trendChartCanvas"></canvas></div>';
+
+  const datasets = Object.entries(series).map(([store, arr]) => ({
+    label: STORE_NAMES[store] || store,
+    data: arr,
+    borderColor: STORE_COLORS[store],
+    backgroundColor: STORE_COLORS[store] + '22',
+    borderWidth: 2.5,
+    pointRadius: 4,
+    pointHoverRadius: 6,
+    pointBackgroundColor: '#fff',
+    pointBorderColor: STORE_COLORS[store],
+    pointBorderWidth: 2,
+    tension: 0.3,
+    spanGaps: true,         // 데이터 없는 구간은 선을 건너뜀
+    // Y축 reverse 상태에서 'start'/'end'는 동작이 불안정함.
+    // 채우기 기준점을 100위(차트 최하단)로 직접 지정해 라인 아래쪽을 확실히 채운다.
+    fill: isTotal ? false : { value: 100 }
+  }));
+
+  if (trendChart) { trendChart.destroy(); trendChart = null; }
+  const ctx = document.getElementById('trendChartCanvas').getContext('2d');
+  trendChart = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: isTotal, position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+        tooltip: {
+          callbacks: {
+            label: c => c.parsed.y === null ? `${c.dataset.label}: 차트 아웃` : `${c.dataset.label}: ${c.parsed.y}위`
+          }
+        }
+      },
+      scales: {
+        y: {
+          reverse: true,           // 1위가 위로 가도록 Y축 뒤집기
+          min: 1,
+          max: 100,                // 순위 범위(1~100위)로 축 고정 — 데이터에 따라 안 흔들림
+          ticks: {
+            precision: 0,
+            stepSize: 10,
+            font: { size: 11 },
+            callback: v => v + '위'
+          },
+          title: { display: true, text: '순위', font: { size: 11 } }
+        },
+        x: {
+          ticks: { font: { size: 10 }, maxRotation: 45, minRotation: 45, autoSkip: true, maxTicksLimit: 8 }
+        }
+      }
+    }
+  });
+}
+
+// 📈 추이 모달: 그래프 ↔ 목록 전환
+function setTrendView(view) {
+  trendView = view;
+  document.getElementById('trendBtnChart').classList.toggle('active', view === 'chart');
+  document.getElementById('trendBtnList').classList.toggle('active', view === 'list');
+  document.getElementById('trendChartView').style.display = view === 'chart' ? '' : 'none';
+  document.getElementById('trendList').style.display = view === 'list' ? '' : 'none';
+  if (view === 'chart') renderTrendChart(modalBookTitle);
+}
+
 function openTrendModal(el) {
   const title = el.dataset.title;
   const author = el.dataset.author;
+  modalBookTitle = title;
   document.getElementById('modalTitle').textContent = title;
   document.getElementById('modalAuthor').textContent = author;
 
+  // --- 목록 뷰 HTML 생성 (기존 로직 유지) ---
   let html = '';
   const limits = [...historyData].reverse().slice(0, 12);
 
@@ -392,13 +614,16 @@ function openTrendModal(el) {
   });
 
   if(limits.length === 0) html = '<div style="padding:20px; text-align:center; color:#999;">과거 데이터가 아직 없습니다.</div>';
-
   document.getElementById('trendList').innerHTML = html;
+
+  // 모달 열 때는 항상 그래프 뷰부터 보여줌
   document.getElementById('trendModal').classList.add('show');
+  setTrendView('chart');
 }
 
 function closeTrendModal() {
   document.getElementById('trendModal').classList.remove('show');
+  if (trendChart) { trendChart.destroy(); trendChart = null; }
 }
 
 function renderBooks(books, container) {
@@ -440,7 +665,7 @@ function renderBooks(books, container) {
         <div class="book-title">${book['제목']||''}</div>
         <div class="book-meta">${author} · ${publisher} ${isOurs ? `<span class="our-badge" style="background:${pubBgColor}">${ourPubName}</span>` : ''} ${storeBadges}</div>
       </div>
-      ${link ? `<div class="book-link"><a href="${link}" target="_blank" onclick="event.stopPropagation()">서점 링크</a></div>` : ''}
+      ${link ? `<div class="book-link"><a href="${link}" target="_blank" onclick="event.stopPropagation()">상세 페이지</a></div>` : ''}
     </div>`;
 
     const imgContent = imgUrl ? `<img src="${imgUrl}" referrerpolicy="no-referrer" loading="lazy" onerror="this.parentElement.classList.add('skeleton');this.style.display='none';" alt="${titleClean}">` : '';
@@ -451,7 +676,7 @@ function renderBooks(books, container) {
         <div class="card-title">${book['제목']||''}</div>
         <div class="card-author">${author}</div>
         <div class="card-pub-row"><span class="card-publisher">${publisher}</span>${isOurs ? `<span class="card-our-badge" style="background:${pubBgColor}">${ourPubName}</span>` : ''} ${storeBadges}</div>
-        ${link ? `<div class="card-link"><a href="${link}" target="_blank" referrerpolicy="no-referrer" onclick="event.stopPropagation()">서점 링크</a></div>` : ''}
+        ${link ? `<div class="card-link"><a href="${link}" target="_blank" referrerpolicy="no-referrer" onclick="event.stopPropagation()">상세 페이지</a></div>` : ''}
       </div>
     </div>`;
   });
@@ -460,6 +685,7 @@ function renderBooks(books, container) {
   if (existingMsg) existingMsg.remove();
 
   container.innerHTML = `
+    ${buildHighlights(books, isTotal)}
     <div class="chart-header">
       <div class="chart-header-left">
         <span class="time-value">📅 ${toOnTheHour(time)}</span>
