@@ -675,7 +675,7 @@ function renderBooks(books, container) {
         <div class="book-title">${book['제목']||''}</div>
         <div class="book-meta">${author} · ${publisher} ${isOurs ? `<span class="our-badge" style="background:${pubBgColor}">${ourPubName}</span>` : ''} ${storeBadges}</div>
       </div>
-      ${link ? `<div class="book-link"><a href="${link}" target="_blank" onclick="event.stopPropagation()">상세 페이지</a></div>` : ''}
+      ${link ? `<div class="book-link"><a href="${link}" target="_blank" onclick="event.stopPropagation()">도서 링크</a></div>` : ''}
     </div>`;
 
     const imgContent = imgUrl ? `<img src="${imgUrl}" referrerpolicy="no-referrer" loading="lazy" onerror="this.parentElement.classList.add('skeleton');this.style.display='none';" alt="${titleClean}">` : '';
@@ -686,7 +686,7 @@ function renderBooks(books, container) {
         <div class="card-title">${book['제목']||''}</div>
         <div class="card-author">${author}</div>
         <div class="card-pub-row"><span class="card-publisher">${publisher}</span>${isOurs ? `<span class="card-our-badge" style="background:${pubBgColor}">${ourPubName}</span>` : ''} ${storeBadges}</div>
-        ${link ? `<div class="card-link"><a href="${link}" target="_blank" referrerpolicy="no-referrer" onclick="event.stopPropagation()">상세 페이지</a></div>` : ''}
+        ${link ? `<div class="card-link"><a href="${link}" target="_blank" referrerpolicy="no-referrer" onclick="event.stopPropagation()">도서 링크</a></div>` : ''}
       </div>
     </div>`;
   });
