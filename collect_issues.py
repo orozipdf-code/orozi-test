@@ -39,6 +39,13 @@ REQUEST_DELAY_SEC = 1.5      # SerpApi 요청 간 간격
 OUTPUT = "issues.json"
 SERPAPI_ENDPOINT = "https://serpapi.com/search.json"
 
+# 검색 기간: 먼저 1일(qdr:d)로 찾고, 결과가 없으면 1주(qdr:w)로 자동 확장.
+# 확장 검색도 SerpApi 검색 1회를 더 쓰므로, 무료 한도가 빠듯하면
+# TIME_FALLBACK 를 False 로 두거나 PRIMARY_RANGE 를 "qdr:w"로 바꾸세요.
+PRIMARY_RANGE = "qdr:d"      # 1차 검색 기간 (qdr:d=1일, qdr:w=1주, qdr:m=1달)
+FALLBACK_RANGE = "qdr:w"     # 0건일 때 넓혀서 재검색할 기간
+TIME_FALLBACK = True         # 0건이면 FALLBACK_RANGE로 한 번 더 검색할지
+
 COL = {
     "title":     ["제목", "title", "책명", "도서명", "상품명"],
     "author":    ["저자", "author", "지은이"],
@@ -107,12 +114,12 @@ def merge(books):
     return list(m.values())
 
 
-def serpapi_search(query, api_key):
-    """구글 웹 검색 · 최근 1일 · 한국어. organic_results 리스트를 반환."""
+def serpapi_search(query, api_key, time_range="qdr:d"):
+    """구글 웹 검색 · 지정 기간 · 한국어. organic_results 리스트를 반환."""
     params = {
         "engine": "google",
         "q": query,
-        "tbs": "qdr:d",       # 최근 24시간
+        "tbs": time_range,    # qdr:d=1일, qdr:w=1주, qdr:m=1달
         "hl": "ko",
         "gl": "kr",
         "num": "10",
@@ -169,19 +176,39 @@ def main():
     results = []
     used = 0
     for i, b in enumerate(books, 1):
-        query = b["title"]
-        if b["author"]:
-            query = f'{b["title"]} {b["author"].split(",")[0].strip()}'
-        print(f"  ({i}/{len(books)}) 검색: {query}")
+        # 검색어: 제목만 큰따옴표로 묶어 정확 매칭 (저자는 넣지 않음).
+        # 저자를 넣으면 검색이 과하게 좁아져 0건이 잦음. 제목 문구 고정이
+        # 노이즈는 줄이면서 블로그·인스타·브런치 등을 폭넓게 잡습니다.
+        title = b["title"].strip()
+        query = f'"{title}"'
+
         items = []
+        # 1차: PRIMARY_RANGE(기본 1일)
+        print(f"  ({i}/{len(books)}) 검색[{PRIMARY_RANGE}]: {query}")
         try:
-            organic = serpapi_search(query, api_key)
+            organic = serpapi_search(query, api_key, PRIMARY_RANGE)
             items = to_items(organic, MAX_ITEMS_PER_BOOK)
             used += 1
         except Exception as e:
             print(f"    [warn] 검색 실패: {e}")
+        time.sleep(REQUEST_DELAY_SEC)
+
+        # 2차: 0건이면 FALLBACK_RANGE(기본 1주)로 넓혀서 재검색
+        used_range = PRIMARY_RANGE
+        if TIME_FALLBACK and not items:
+            print(f"       └ 0건 → 재검색[{FALLBACK_RANGE}]")
+            try:
+                organic = serpapi_search(query, api_key, FALLBACK_RANGE)
+                items = to_items(organic, MAX_ITEMS_PER_BOOK)
+                used += 1
+                used_range = FALLBACK_RANGE
+            except Exception as e:
+                print(f"    [warn] 재검색 실패: {e}")
+            time.sleep(REQUEST_DELAY_SEC)
+
         b["items"] = items
         b["item_count"] = len(items)
+        b["time_range"] = used_range if items else PRIMARY_RANGE
         results.append(b)
         time.sleep(REQUEST_DELAY_SEC)
 
