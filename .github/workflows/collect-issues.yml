@@ -25,13 +25,21 @@ jobs:
           SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}
         run: python collect_issues.py
 
-      - name: Commit issues.json if changed
+- name: Commit issues.json if changed
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add issues.json
           if git diff --staged --quiet; then
             echo "No changes to issues.json"
+          else
+            git commit -m "chore: update issues.json ($(date -u +%Y-%m-%d))"
+            for i in 1 2 3; do
+              git pull --rebase --autostash origin master && git push && break
+              echo "push retry $i..."
+              sleep 5
+            done
+          fi
           else
             git commit -m "chore: update issues.json ($(date -u +%Y-%m-%d))"
             git push
