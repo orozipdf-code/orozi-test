@@ -1,26 +1,32 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-collect_issues.py
------------------
-윌북 계열(윌북 / 윌북주니어 / 윌북아트) 도서에 대해 '최근 1일' 구글 뉴스
-검색 결과를 수집하여 issues.json 으로 저장합니다. API 키 불필요.
+collect_issues.py  (SerpApi 버전)
+---------------------------------
+윌북 계열(윌북 / 윌북주니어 / 윌북아트) 도서에 대해 구글 '최근 1일' 웹 검색
+결과(블로그·인스타·Threads·브런치·뉴스 등 전체 탭)를 SerpApi로 수집하여
+issues.json 으로 저장합니다.
 
+- API 키는 코드에 넣지 않습니다. 환경변수 SERPAPI_KEY 에서 읽습니다.
+  (GitHub Actions에서는 Secrets에 SERPAPI_KEY 를 등록해두면 자동 주입)
 - 입력: kyobo_bestseller.csv / aladin_bestseller.csv / yes24_bestseller.csv
-        (컬럼: 순위, 제목, 저자, 출판사, ... 한글 헤더)
-        '출판사' 값에 윌북 계열이 포함된 행만 대상.
-- 출력: issues.json  { generated_at, book_count, books:[{title, author, publisher, items:[...]}] }
+        (한글 헤더: 순위, 제목, 저자, 출판사 …)  출판사가 윌북 계열인 행만.
+- 출력: issues.json
+        { generated_at, book_count, books:[{title, author, publisher, items:[...]}] }
+
+검색 1회 = 책 1권. 윌북 책이 보통 2~3권이라 하루 1번 실행 시 월 60~90회로
+SerpApi 무료 한도(월 100회) 안에서 동작합니다.
 """
 
 import csv
 import json
+import os
 import re
+import sys
 import time
-import html
 import datetime
 import urllib.parse
 import urllib.request
-import xml.etree.ElementTree as ET
 
 # ---------------------------------------------------------------- 설정
 CSV_FILES = ["kyobo_bestseller.csv", "aladin_bestseller.csv", "yes24_bestseller.csv"]
@@ -28,9 +34,10 @@ CSV_FILES = ["kyobo_bestseller.csv", "aladin_bestseller.csv", "yes24_bestseller.
 # 긴 이름부터: '윌북주니어'가 '윌북'으로 잘못 안 잡히게
 OUR_PUBLISHERS = ["윌북주니어", "윌북아트", "윌북"]
 
-MAX_ITEMS_PER_BOOK = 8
-REQUEST_DELAY_SEC = 1.0
+MAX_ITEMS_PER_BOOK = 8       # 책당 화면에 보여줄 최대 결과 수
+REQUEST_DELAY_SEC = 1.5      # SerpApi 요청 간 간격
 OUTPUT = "issues.json"
+SERPAPI_ENDPOINT = "https://serpapi.com/search.json"
 
 COL = {
     "title":     ["제목", "title", "책명", "도서명", "상품명"],
@@ -53,7 +60,7 @@ def is_ours(publisher):
 
 
 def which_brand(publisher):
-    for name in OUR_PUBLISHERS:      # 긴 것부터
+    for name in OUR_PUBLISHERS:
         if name in (publisher or ""):
             return name
     return ""
@@ -100,40 +107,46 @@ def merge(books):
     return list(m.values())
 
 
-def google_news_rss(query):
-    q = urllib.parse.quote(f"{query} when:1d")
-    url = f"https://news.google.com/rss/search?q={q}&hl=ko&gl=KR&ceid=KR:ko"
-    req = urllib.request.Request(url, headers={
-        "User-Agent": "Mozilla/5.0 (compatible; orozi-issue-collector/1.0)"})
-    with urllib.request.urlopen(req, timeout=20) as resp:
-        return resp.read()
+def serpapi_search(query, api_key):
+    """구글 웹 검색 · 최근 1일 · 한국어. organic_results 리스트를 반환."""
+    params = {
+        "engine": "google",
+        "q": query,
+        "tbs": "qdr:d",       # 최근 24시간
+        "hl": "ko",
+        "gl": "kr",
+        "num": "10",
+        "api_key": api_key,
+    }
+    url = SERPAPI_ENDPOINT + "?" + urllib.parse.urlencode(params)
+    req = urllib.request.Request(url, headers={"User-Agent": "orozi-issue-collector/2.0"})
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        data = json.loads(resp.read().decode("utf-8"))
+    if data.get("search_metadata", {}).get("status") == "Error":
+        raise RuntimeError(data.get("error", "SerpApi error"))
+    return data.get("organic_results", []) or []
 
 
-def strip_tags(s):
-    return re.sub(r"<[^>]+>", "", s or "").strip()
-
-
-def parse_rss(xml_bytes, limit):
+def to_items(organic, limit):
     items = []
-    try:
-        root = ET.fromstring(xml_bytes)
-    except ET.ParseError:
-        return items
-    for item in root.iter("item"):
-        def text(tag):
-            el = item.find(tag)
-            return el.text if el is not None and el.text else ""
-        title = html.unescape(text("title"))
-        link = text("link")
-        pub = text("pubDate")
-        src_el = item.find("source")
-        source = src_el.text if src_el is not None and src_el.text else ""
-        desc = html.unescape(strip_tags(text("description")))
-        if not source and " - " in title:
-            source = title.rsplit(" - ", 1)[-1].strip()
+    for r in organic:
+        title = (r.get("title") or "").strip()
+        link = (r.get("link") or "").strip()
+        if not title or not link:
+            continue
+        source = (r.get("source") or "").strip()
+        if not source:
+            dl = r.get("displayed_link") or ""
+            source = dl.split("›")[0].strip() if dl else ""
+        snippet = (r.get("snippet") or "").strip()
+        # SerpApi가 주는 날짜(예: "3시간 전", "2026. 7. 9.")가 있으면 사용
+        date = (r.get("date") or "").strip()
         items.append({
-            "title": title, "link": link, "source": source,
-            "published": pub, "snippet": desc[:180],
+            "title": title,
+            "link": link,
+            "source": source,
+            "published": date,     # 상대/절대 문자열 그대로 (프론트에서 표시)
+            "snippet": snippet[:180],
         })
         if len(items) >= limit:
             break
@@ -141,13 +154,20 @@ def parse_rss(xml_bytes, limit):
 
 
 def main():
+    api_key = os.environ.get("SERPAPI_KEY", "").strip()
+    if not api_key:
+        print("[error] 환경변수 SERPAPI_KEY 가 없습니다. "
+              "GitHub Secrets에 SERPAPI_KEY 를 등록하세요.")
+        sys.exit(1)
+
     all_books = []
     for path in CSV_FILES:
         all_books.extend(read_will_books(path))
     books = merge(all_books)
-    print(f"[info] 윌북 계열 도서 {len(books)}권")
+    print(f"[info] 윌북 계열 도서 {len(books)}권 (검색 {len(books)}회 예정)")
 
     results = []
+    used = 0
     for i, b in enumerate(books, 1):
         query = b["title"]
         if b["author"]:
@@ -155,9 +175,11 @@ def main():
         print(f"  ({i}/{len(books)}) 검색: {query}")
         items = []
         try:
-            items = parse_rss(google_news_rss(query), MAX_ITEMS_PER_BOOK)
+            organic = serpapi_search(query, api_key)
+            items = to_items(organic, MAX_ITEMS_PER_BOOK)
+            used += 1
         except Exception as e:
-            print(f"    [warn] 실패: {e}")
+            print(f"    [warn] 검색 실패: {e}")
         b["items"] = items
         b["item_count"] = len(items)
         results.append(b)
@@ -166,12 +188,14 @@ def main():
     payload = {
         "generated_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "publisher_filter": "윌북 계열",
+        "source": "google (serpapi, qdr:d)",
         "book_count": len(results),
+        "searches_used": used,
         "books": results,
     }
     with open(OUTPUT, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
-    print(f"[done] {OUTPUT} · {len(results)}권 · "
+    print(f"[done] {OUTPUT} · {len(results)}권 · 검색 {used}회 사용 · "
           f"총 {sum(r['item_count'] for r in results)}건")
 
 
