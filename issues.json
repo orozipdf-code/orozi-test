@@ -1,7 +1,9 @@
 {
-  "generated_at": "2026-07-09T05:04:12.597332+00:00",
+  "generated_at": "2026-07-09T06:12:52.362848+00:00",
   "publisher_filter": "윌북 계열",
+  "source": "google (serpapi, qdr:d)",
   "book_count": 1,
+  "searches_used": 1,
   "books": [
     {
       "title": "내면 근력",
