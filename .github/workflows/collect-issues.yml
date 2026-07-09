@@ -13,14 +13,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
-      - name: Collect recent issues (Google News RSS, last 1 day)
+      - name: Collect recent issues (Google web search via SerpApi, last 1 day)
+        env:
+          SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}
         run: python collect_issues.py
 
       - name: Commit issues.json if changed
