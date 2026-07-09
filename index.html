@@ -165,6 +165,21 @@
     .trend-rank.none { color: #ccc; font-weight: 400; font-size: 13px; }
     .trend-stores { display: flex; gap: 4px; }
 
+    /* 🔥 최근 이슈 탭 스타일 */
+    .issue-meta { font-size: 12px; color: #999; margin-bottom: 10px; display: flex; align-items: center; gap: 5px; }
+    .issue-list { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; padding-right: 4px; }
+    .issue-card { display: block; text-decoration: none; color: #222; background: #f8f9fa; border-radius: 10px; padding: 12px 15px; border-left: 3px solid transparent; transition: all 0.15s; }
+    .issue-card:hover { background: #fff; border-left-color: var(--store-color); box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .issue-title { font-size: 13.5px; font-weight: 700; line-height: 1.4; margin-bottom: 4px; }
+    .issue-snippet { font-size: 12px; color: #888; line-height: 1.45; margin-bottom: 6px; }
+    .issue-foot { display: flex; align-items: center; gap: 7px; font-size: 11px; }
+    .issue-source { color: var(--store-color); font-weight: 700; }
+    .issue-time { color: #aaa; }
+    .issue-foot .dot { width: 3px; height: 3px; border-radius: 50%; background: #ccc; }
+    .issue-empty { padding: 44px 20px; text-align: center; color: #bbb; font-size: 13px; line-height: 1.7; }
+    .issue-more { margin-top: 12px; text-align: center; }
+    .issue-more a { font-size: 12px; color: var(--store-color); font-weight: 600; text-decoration: none; border-bottom: 1px solid var(--store-color); padding-bottom: 1px; }
+
     .footer { text-align: center; padding: 40px 20px; font-size: 12px; color: #aaa; margin-top: 20px; }
     .footer a { color: #888; text-decoration: none; border-bottom: 1px solid #ddd; transition: color 0.2s; }
     .footer a:hover { color: var(--store-color); border-color: var(--store-color); }
@@ -205,11 +220,13 @@
     <div class="trend-view-toggle">
       <button class="trend-view-btn active" id="trendBtnChart" onclick="setTrendView('chart')">📈 그래프</button>
       <button class="trend-view-btn" id="trendBtnList" onclick="setTrendView('list')">☰ 목록</button>
+      <button class="trend-view-btn" id="trendBtnIssues" onclick="setTrendView('issues')" style="display:none">🔥 최근 이슈</button>
     </div>
     <div id="trendChartView">
       <div class="trend-chart-wrap"><canvas id="trendChartCanvas"></canvas></div>
     </div>
     <div class="trend-list" id="trendList" style="display:none"></div>
+    <div id="trendIssues" style="display:none"></div>
   </div>
 </div>
 
@@ -219,7 +236,7 @@
 </div>
 
 <script>
-const RAW = "https://raw.githubusercontent.com/orozipdf-code/willbooks_rank/master/";
+const RAW = "https://raw.githubusercontent.com/orozipdf-code/orozi-test/master/";
 const CSV_FILES = { kyobo: "kyobo_bestseller.csv", aladin: "aladin_bestseller.csv", yes24: "yes24_bestseller.csv" };
 const STORE_COLORS = { kyobo: "#4DAC27", aladin: "#A2052C", yes24: "#020287", total: "#8e44ad" };
 const STORE_NAMES = { kyobo: "교보", aladin: "알라딘", yes24: "예스24" };
@@ -243,9 +260,71 @@ let filterOn = false;
 let searchQuery = '';
 let currentView = 'list';
 let searchTimeout;
-let trendView = 'chart';     // 📈 추이 모달: 'chart' 또는 'list'
+let trendView = 'chart';     // 📈 추이 모달: 'chart' / 'list' / 'issues'
 let trendChart = null;       // 📈 Chart.js 인스턴스 보관
 let modalBookTitle = '';     // 📈 현재 모달에 띄운 책 제목
+let modalBookAuthor = '';    // 🔥 현재 모달 책의 저자 (구글 검색 링크용)
+let modalBookIsOurs = false; // 🔥 현재 모달 책이 윌북 계열인지
+
+// 🔥 최근 이슈: GitHub Actions가 생성하는 issues.json (윌북 계열만 수집)
+const ISSUES_FILE = 'issues.json';
+let issuesData = null;       // { generated_at, books:[{title, items:[...]}] }
+
+const normTitle = s => (s || '').replace(/\s+/g, '').toLowerCase();
+
+// 🔥 issues.json 로드 (최초 1회)
+async function loadIssues() {
+  try {
+    const res = await fetchWithRetry(RAW + ISSUES_FILE + '?t=' + Date.now());
+    issuesData = await res.json();
+  } catch { issuesData = { books: [] }; }
+}
+
+// 🔥 한 책의 상대 시각 (n시간 전)
+function issueTimeAgo(pub) {
+  if (!pub) return '';
+  const d = new Date(pub); if (isNaN(d)) return '';
+  const diff = (Date.now() - d.getTime()) / 1000;
+  if (diff < 3600) return `${Math.max(1, Math.round(diff/60))}분 전`;
+  if (diff < 86400) return `${Math.round(diff/3600)}시간 전`;
+  return `${Math.round(diff/86400)}일 전`;
+}
+
+// 🔥 최근 이슈 패널 렌더링
+function renderIssues() {
+  const wrap = document.getElementById('trendIssues');
+  const gLink = `https://www.google.com/search?q=${encodeURIComponent(modalBookTitle + ' ' + (modalBookAuthor||''))}&tbs=qdr:d`;
+
+  if (!modalBookIsOurs) {
+    wrap.innerHTML = `<div class="issue-empty">최근 이슈는 <b>윌북 계열 도서</b>에 한해 자동 수집됩니다.
+      <div class="issue-more"><a href="${gLink}" target="_blank" rel="noopener">구글에서 최근 1일 직접 검색 →</a></div></div>`;
+    return;
+  }
+  const rec = (issuesData?.books || []).find(b => normTitle(b.title) === normTitle(modalBookTitle));
+  if (!rec) {
+    wrap.innerHTML = `<div class="issue-empty">아직 수집된 이슈가 없어요.<br><small>GitHub Actions가 issues.json을 만들면 여기에 표시됩니다.</small>
+      <div class="issue-more"><a href="${gLink}" target="_blank" rel="noopener">지금 구글에서 최근 1일 검색 →</a></div></div>`;
+    return;
+  }
+  const items = rec.items || [];
+  const genAt = issuesData.generated_at ? new Date(issuesData.generated_at) : null;
+  const metaTime = genAt && !isNaN(genAt) ? genAt.toLocaleString('ko-KR', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' }) : '';
+  if (!items.length) {
+    wrap.innerHTML = `<div class="issue-empty">최근 1일 동안 새로 잡힌 뉴스가 없어요.<br><small>순위 변동이 뉴스보다 앞선 경우일 수 있어요.</small>
+      <div class="issue-more"><a href="${gLink}" target="_blank" rel="noopener">구글에서 직접 확인 →</a></div></div>`;
+    return;
+  }
+  const esc = s => (s||'').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  wrap.innerHTML = `
+    <div class="issue-meta">🕒 최근 1일 · 구글 뉴스 ${items.length}건${metaTime ? ` · ${metaTime} 갱신` : ''}</div>
+    <div class="issue-list">${items.map(it => `
+      <a class="issue-card" href="${esc(it.link)}" target="_blank" rel="noopener noreferrer">
+        <div class="issue-title">${esc(it.title)}</div>
+        ${it.snippet ? `<div class="issue-snippet">${esc(it.snippet)}</div>` : ''}
+        <div class="issue-foot">${it.source ? `<span class="issue-source">${esc(it.source)}</span><span class="dot"></span>` : ''}<span class="issue-time">${esc(issueTimeAgo(it.published) || it.published || '')}</span></div>
+      </a>`).join('')}</div>
+    <div class="issue-more"><a href="${gLink}" target="_blank" rel="noopener">구글에서 더 보기 →</a></div>`;
+}
 
 function setStoreColor(store) {
   document.documentElement.style.setProperty('--store-color', STORE_COLORS[store]);
@@ -445,7 +524,7 @@ function buildHighlights(books, isTotal) {
     const titleShort = cut(b['제목'], 24);          // 제목은 24자까지
     const subFull = `${b['저자']||''} · ${b['출판사']||''}`;
     const subShort = cut(subFull, 28);              // 저자·출판사 합쳐 28자까지
-    return `<div class="hl-row" data-title="${t}" data-author="${a}" onclick="openTrendModal(this)">
+    return `<div class="hl-row" data-title="${t}" data-author="${a}" data-publisher="${esc(b['출판사'])}" onclick="openTrendModal(this)">
       <span class="hl-rank">${parseInt(b['순위'])||'-'}위</span>
       <div class="hl-info">
         <div class="hl-title" title="${esc(b['제목'])}">${titleShort}</div>
@@ -576,15 +655,22 @@ function setTrendView(view) {
   trendView = view;
   document.getElementById('trendBtnChart').classList.toggle('active', view === 'chart');
   document.getElementById('trendBtnList').classList.toggle('active', view === 'list');
+  document.getElementById('trendBtnIssues').classList.toggle('active', view === 'issues');
   document.getElementById('trendChartView').style.display = view === 'chart' ? '' : 'none';
   document.getElementById('trendList').style.display = view === 'list' ? '' : 'none';
+  document.getElementById('trendIssues').style.display = view === 'issues' ? '' : 'none';
   if (view === 'chart') renderTrendChart(modalBookTitle);
+  if (view === 'issues') renderIssues();
 }
 
 function openTrendModal(el) {
   const title = el.dataset.title;
   const author = el.dataset.author;
   modalBookTitle = title;
+  modalBookAuthor = author;
+  // 🔥 이 책이 윌북 계열인지 판별 → '최근 이슈' 탭 노출 여부 결정
+  modalBookIsOurs = isOurPublisher(el.dataset.publisher || '');
+  document.getElementById('trendBtnIssues').style.display = modalBookIsOurs ? '' : 'none';
   document.getElementById('modalTitle').textContent = title;
   document.getElementById('modalAuthor').textContent = author;
 
@@ -665,7 +751,7 @@ function renderBooks(books, container) {
       storeBadges = book.stores.map(s => `<span class="store-badge-mini" style="background:${STORE_COLORS[s]}">${STORE_NAMES[s][0]}</span>`).join(' ');
     }
 
-    listHtml += `<div class="book-item ${isOurs ? 'highlight' : ''}" data-ours="${isOurs}" data-title="${titleClean}" data-author="${authorClean}" onclick="openTrendModal(this)">
+    listHtml += `<div class="book-item ${isOurs ? 'highlight' : ''}" data-ours="${isOurs}" data-title="${titleClean}" data-author="${authorClean}" data-publisher="${publisher.replace(/"/g,'&quot;')}" onclick="openTrendModal(this)">
       <div class="rank-col">
         <div class="rank-num ${rank<=3?'top3':''}">${rank}</div>
         <div class="change-badge ${cls}">${icon}</div>
@@ -679,7 +765,7 @@ function renderBooks(books, container) {
     </div>`;
 
     const imgContent = imgUrl ? `<img src="${imgUrl}" referrerpolicy="no-referrer" loading="lazy" onerror="this.parentElement.classList.add('skeleton');this.style.display='none';" alt="${titleClean}">` : '';
-    galleryHtml += `<div class="gallery-card ${isOurs ? 'highlight' : ''}" data-ours="${isOurs}" data-title="${titleClean}" data-author="${authorClean}" onclick="openTrendModal(this)">
+    galleryHtml += `<div class="gallery-card ${isOurs ? 'highlight' : ''}" data-ours="${isOurs}" data-title="${titleClean}" data-author="${authorClean}" data-publisher="${publisher.replace(/"/g,'&quot;')}" onclick="openTrendModal(this)">
       <div class="card-img-wrap ${imgUrl ? '' : 'skeleton'}">${imgContent}</div>
       <div class="card-info">
         <div class="card-rank-row"><span class="card-rank ${rank<=3?'top3':''}">${rank}</span><span class="card-change ${cls}">${icon}</span></div>
@@ -818,7 +904,7 @@ async function loadHistory() {
   } catch { document.getElementById('history-view').innerHTML = '<div class="error">지난 차트가 아직 없어요.</div>'; }
 }
 
-setStoreColor('kyobo'); loadLatest(); loadHistory();
+setStoreColor('kyobo'); loadLatest(); loadHistory(); loadIssues();
 </script>
 <script data-goatcounter="https://rt-bestseller.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </body>
